@@ -63,6 +63,20 @@ allprojects { //Properties that you need to compile your project (The applicatio
         reproducibleFileOrder = true
     }
 }
+subprojects {
+    repositories {
+        maven {
+            url = rootProject.file(System.properties.get("conclaveRepo") ?: System.getenv("CONCLAVE_REPO") ?: "/home/reji/Projects/conclave/conclave-sdk-0.4/repo")
+        }
+        mavenCentral()
+    }
+    tasks.withType(Test) {
+        useJUnitPlatform()
+        testLogging {
+            events "passed", "skipped", "failed"
+        }
+    }
+}
 
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'

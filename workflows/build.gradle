@@ -37,6 +37,8 @@ configurations {
     integrationTestRuntime.extendsFrom testRuntime
 }
 
+def mode = findProperty("enclaveMode")?.toString()?.toLowerCase() ?: "simulation"
+
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
@@ -49,6 +51,15 @@ dependencies {
 
     // CorDapp dependencies.
     cordapp project(":contracts")
+
+    // Enclave
+    implementation "com.r3.conclave:conclave-client:$conclaveVersion"
+    implementation "com.r3.conclave:conclave-host:$conclaveVersion"
+    runtimeOnly project(path: ":enclave", configuration: mode)
+}
+
+tasks.register("prepareForSigning") {
+    it.dependsOn(":enclave:generateEnclaveSigningMaterial" + mode.capitalize())
 }
 
 task integrationTest(type: Test, dependsOn: []) {

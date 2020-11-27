@@ -1,44 +1,60 @@
 package tech.industria
 
-import tech.industria.flows.Responder
-import net.corda.core.identity.CordaX500Name
-import net.corda.testing.core.internal.ContractJarTestUtils.makeTestJar
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetworkNotarySpec
-import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.TestCordapp
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import tech.industria.flows.GetAttestationResponder
+import tech.industria.flows.Initiator
+import tech.industria.flows.SendMailResponder
 
 
 class FlowTests {
+    private val network = MockNetwork(
+        MockNetworkParameters(
+            cordappsForAllNodes = listOf(
+                TestCordapp.findCordapp("tech.industria.contracts"),
+                TestCordapp.findCordapp("tech.industria.flows")
+            )
+        )
+    )
+    lateinit var nodeB: StartedMockNode
+    lateinit var nodeA: StartedMockNode
+    private val mapper =
+        ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .registerKotlinModule()
 
-    lateinit var mockNetwork: MockNetwork
-    lateinit var a: StartedMockNode
-    lateinit var b: StartedMockNode
 
     @Before
     fun setup() {
-        mockNetwork = MockNetwork(
-                listOf("com.template"),
-                notarySpecs = listOf(MockNetworkNotarySpec(CordaX500Name("Notary","London","GB")))
-        )
-        a = mockNetwork.createNode(MockNodeParameters())
-        b = mockNetwork.createNode(MockNodeParameters())
-        val startedNodes = arrayListOf(a, b)
-        // For real nodes this happens automatically, but we have to manually register the flow for tests
-        startedNodes.forEach { it.registerInitiatedFlow(Responder::class.java) }
-        mockNetwork.runNetwork()
+        network.runNetwork()
+        nodeB = network.createNode()
+        nodeA = network.createNode()
+        nodeA.registerInitiatedFlow(SendMailResponder::class.java)
+        network.runNetwork()
+        nodeA.registerInitiatedFlow(GetAttestationResponder::class.java)
+        network.runNetwork()
+        nodeB.registerInitiatedFlow(GetAttestationResponder::class.java)
+        network.runNetwork()
+        nodeB.registerInitiatedFlow(SendMailResponder::class.java)
+        network.runNetwork()
     }
 
     @After
-    fun tearDown() {
-
-    }
+    fun tearDown() = network.stopNodes()
 
     @Test
     fun `dummy test`() {
-
+        val result = nodeA.startFlow(Initiator(word = "Batman", otherParty = nodeB.info.legalIdentities.first()))
+        network.runNetwork()
+        assertEquals(result.getOrThrow(), "namtaB")
     }
 }
