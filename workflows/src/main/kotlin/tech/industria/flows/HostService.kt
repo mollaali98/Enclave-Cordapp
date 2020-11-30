@@ -20,7 +20,6 @@ class HostService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     val mailPool = mutableMapOf<String?, ByteArray>()
 
     init {
-        println("Pesho")
         try {
             EnclaveHost.checkPlatformSupportsEnclaves(true)
             println("This platform supports enclaves in simulation, debug and release mode.")

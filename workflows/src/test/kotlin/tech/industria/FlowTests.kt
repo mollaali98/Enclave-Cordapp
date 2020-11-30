@@ -12,9 +12,10 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertEquals
-import tech.industria.flows.GetAttestationResponder
+import tech.industria.flows.ReturnAttestationResponder
 import tech.industria.flows.Initiator
-import tech.industria.flows.SendMailResponder
+import tech.industria.flows.ReceiveMail
+import tech.industria.flows.Responder
 
 
 class FlowTests {
@@ -38,14 +39,17 @@ class FlowTests {
         network.runNetwork()
         nodeB = network.createNode()
         nodeA = network.createNode()
-        nodeA.registerInitiatedFlow(SendMailResponder::class.java)
+        nodeA.registerInitiatedFlow(Responder::class.java)
+        nodeB.registerInitiatedFlow(Responder::class.java)
         network.runNetwork()
-        nodeA.registerInitiatedFlow(GetAttestationResponder::class.java)
-        network.runNetwork()
-        nodeB.registerInitiatedFlow(GetAttestationResponder::class.java)
-        network.runNetwork()
-        nodeB.registerInitiatedFlow(SendMailResponder::class.java)
-        network.runNetwork()
+//        nodeA.registerInitiatedFlow(ReceiveMail::class.java)
+//        network.runNetwork()
+//        nodeA.registerInitiatedFlow(ReturnAttestationResponder::class.java)
+//        network.runNetwork()
+//        nodeB.registerInitiatedFlow(ReturnAttestationResponder::class.java)
+//        network.runNetwork()
+//        nodeB.registerInitiatedFlow(ReceiveMail::class.java)
+//        network.runNetwork()
     }
 
     @After

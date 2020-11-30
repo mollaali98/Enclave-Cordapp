@@ -1,48 +1,53 @@
 package tech.industria.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.*
-import net.corda.core.identity.Party
+import com.r3.conclave.client.EnclaveConstraint
+import com.r3.conclave.common.EnclaveInstanceInfo
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.utilities.unwrap
+import java.util.*
 
 
-@InitiatingFlow
 class GetAttestation(
-    val otherParty: Party
-) : FlowLogic<ByteArray>() {
+    private val session: FlowSession
+) : FlowLogic<EnclaveInstanceInfo>() {
     @Suspendable
-    override fun call(): ByteArray {
-        val session = initiateFlow(otherParty)
-        return session.receive<ByteArray>().unwrap { it }
+    override fun call(): EnclaveInstanceInfo {
+        return session.receive<String>().unwrap {
+            val attestation = EnclaveInstanceInfo.deserialize(Base64.getDecoder().decode(it)).also {
+                print("attestation: ")
+                println(it)
+            }
+            EnclaveConstraint.parse("S:4924CA3A9C8241A3C0AA1A24A407AA86401D2B79FA9FF84932DA798A942166D4 PROD:1 SEC:INSECURE")
+                .check(attestation)
+            attestation
+        }
     }
 
 }
 
-@InitiatedBy(GetAttestation::class)
-class GetAttestationResponder(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
+class ReturnAttestationResponder(private val counterpartySession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val hostService = serviceHub.cordaService(HostService::class.java)
-        counterpartySession.send(hostService.getAttestationBytes())
+        counterpartySession.send(Base64.getEncoder().encodeToString(hostService.getAttestationBytes()))
     }
 }
 
-@InitiatingFlow
-@StartableByRPC
+
 class SendMail(
-    val otherParty: Party,
-    val mail: ByteArray
+    private val session: FlowSession,
+    private val mail: ByteArray
 ) : FlowLogic<ByteArray>() {
     @Suspendable
     override fun call(): ByteArray {
-        val session = initiateFlow(otherParty)
         return session.sendAndReceive<ByteArray>(mail).unwrap { it }
+//        return "".toByteArray()
     }
 }
 
-
-@InitiatedBy(SendMail::class)
-class SendMailResponder(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
+class ReceiveMail(private val counterpartySession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val hostService = serviceHub.cordaService(HostService::class.java)
